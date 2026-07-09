@@ -4,11 +4,12 @@ import type {
   ArticleSummary,
   Paragraph,
   ParsedArticle,
+  Token,
   WordNote,
   WordStatusLookup,
   WordStatusSets,
 } from "./types"
-import { tokenizeParagraph, wordKey } from "./tokenizer"
+import { tokenizeParagraph, tokenizeSentence, wordKey } from "./tokenizer"
 
 /** Strip markdown emphasis/emoji noise from English paragraph text. */
 function cleanInline(text: string): { text: string; boldWords: Set<string> } {
@@ -26,6 +27,12 @@ function cleanInline(text: string): { text: string; boldWords: Set<string> } {
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, "")
   out = out.replace(/\s+/g, " ").trim()
   return { text: out, boldWords }
+}
+
+/** Clean a `## ` title (strip markdown/emoji) and tokenize it into clickable tokens. */
+function makeTitle(raw: string, lookup: WordStatusLookup): { title: string; titleTokens: Token[] } {
+  const { text, boldWords } = cleanInline(raw)
+  return { title: text, titleTokens: tokenizeSentence(text, { wordStatus: lookup, boldWords }) }
 }
 
 /** Parse simple YAML frontmatter into a record (handles `key: value` + list items). */
@@ -277,7 +284,7 @@ export function parseArticle(markdown: string, source: ParsedArticle["source"]):
 
   const ensurePart = (): ArticlePart => {
     if (!currentPart) {
-      currentPart = { title: "Story", paragraphs: [], notes: [] }
+      currentPart = { title: "Story", titleTokens: [], paragraphs: [], notes: [] }
       parts.push(currentPart)
     }
     return currentPart
@@ -299,7 +306,8 @@ export function parseArticle(markdown: string, source: ParsedArticle["source"]):
     const partHeader = /^##\s+(.+)$/.exec(line)
     if (partHeader) {
       flushPara()
-      currentPart = { title: partHeader[1]!.trim(), paragraphs: [], notes: [] }
+      const { title, titleTokens } = makeTitle(partHeader[1]!, lookup)
+      currentPart = { title, titleTokens, paragraphs: [], notes: [] }
       parts.push(currentPart)
       pendingCalloutForPart = true
       i++
@@ -370,7 +378,7 @@ export function parseArticle(markdown: string, source: ParsedArticle["source"]):
   }
 
   if (parts.length === 0) {
-    parts.push({ title: "Story", paragraphs: [], notes: [] })
+    parts.push({ title: "Story", titleTokens: [], paragraphs: [], notes: [] })
   }
 
   // Convert the internal Set-based lookup to serializable arrays for output.

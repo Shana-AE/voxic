@@ -33,6 +33,18 @@ describe("parseArticle", () => {
     expect(parsed.parts[0]!.title).toContain("Pomposity")
   })
 
+  it("cleans + tokenizes the title into clickable tokens", () => {
+    const part = parsed.parts[0]!
+    // Markdown ** and emoji stripped from the title text.
+    expect(part.title).not.toContain("**")
+    expect(part.title).not.toContain("🗑️")
+    // Title words are tokenized; targets follow the same precedence as paragraphs
+    // (forget > bold). "pomposity" is forgotten, "grandiloquence" is only bold.
+    expect(part.titleTokens.length).toBeGreaterThan(0)
+    expect(part.titleTokens.find((t) => t.key === "pomposity")?.target).toBe("forget")
+    expect(part.titleTokens.find((t) => t.key === "grandiloquence")?.target).toBe("bold")
+  })
+
   it("attaches Chinese translation callout to the part", () => {
     expect(parsed.parts[0]!.translation).toContain("自负")
   })

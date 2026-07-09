@@ -54,7 +54,11 @@ async function playAll() {
 
     <!-- Parts -->
     <section v-for="(part, pi) in article.parts" :key="pi" class="mb-8">
-      <h2 class="text-xl font-semibold mb-3">{{ part.title }}</h2>
+      <InteractiveTitle
+        :tokens="part.titleTokens"
+        :note-index="article.noteIndex"
+        @word-click="onWordClick"
+      />
 
       <InteractiveParagraph
         v-for="(para, idx) in part.paragraphs"

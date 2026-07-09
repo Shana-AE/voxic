@@ -57,6 +57,8 @@ export interface WordNote {
 /** A titled section of the story with English paragraphs + translation + notes. */
 export interface ArticlePart {
   title: string
+  /** Title split into clickable tokens (cleaned of markdown/emoji). */
+  titleTokens: Token[]
   paragraphs: Paragraph[]
   /** Collapsible Chinese translation if present. */
   translation?: string
