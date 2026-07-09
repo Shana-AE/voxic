@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Core is a parsing/utility library: every index access is guarded by a
+    // length check in the same expression, so noUncheckedIndexedAccess only
+    // adds noise. The web app keeps it strict.
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

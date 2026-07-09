@@ -1,0 +1,39 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# builds
+dist
+build
+.output
+.nuxt
+.data
+.nitro
+.cache
+
+# env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# db / runtime data
+*.db
+*.db-*
+data/
+
+# logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor / os
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# test
+coverage

@@ -1,0 +1,24 @@
+{
+  "name": "voxic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "description": "Interactive English reading & vocabulary studio — click-to-define articles + GPT-SoVITS TTS playback.",
+  "scripts": {
+    "dev": "pnpm --filter @voxic/web dev",
+    "build": "pnpm --filter @voxic/web build",
+    "preview": "pnpm --filter @voxic/web preview",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @voxic/web db:generate"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

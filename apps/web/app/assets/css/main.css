@@ -1,0 +1,104 @@
+/* Voxic base styles — dark-first reading app. */
+
+:root {
+  --vh: 1vh;
+  color-scheme: light dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-bottom: 6rem; /* keep tapped words clear of the player bar */
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg, #f6f7f9);
+  color: var(--fg, #1a1d24);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.dark body {
+  --bg: #070810;
+  --fg: #e6e8ec;
+}
+
+/* Reading column typography */
+.prose-reading {
+  font-family: var(--font-reading, "Source Serif 4", Georgia, serif);
+  font-size: clamp(1.02rem, 1.6vw, 1.18rem);
+  line-height: 1.85;
+  letter-spacing: 0.005em;
+}
+
+.prose-reading p {
+  margin: 0 0 1.1em;
+}
+
+/* Clickable words */
+.word-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.12s ease;
+}
+
+.word-btn:hover {
+  background: var(--word-hover, rgba(52, 120, 246, 0.14));
+}
+
+.word-btn[data-target="forget"] {
+  color: #d64545;
+  text-decoration: underline wavy #d64545;
+  text-underline-offset: 3px;
+}
+
+.word-btn[data-target="vague"] {
+  color: #b8860b;
+  text-decoration: underline dashed #b8860b;
+  text-underline-offset: 3px;
+}
+
+.word-btn[data-target="bold"] {
+  font-weight: 600;
+}
+
+.dark .word-btn[data-target="forget"] {
+  color: #ff6b6b;
+  text-decoration-color: #ff6b6b;
+}
+
+.dark .word-btn[data-target="vague"] {
+  color: #e0a93b;
+  text-decoration-color: #e0a93b;
+}
+
+/* Fixed bottom player bar safe area (notches / Pura X hinge) */
+.player-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Thin scrollbars */
+* {
+  scrollbar-width: thin;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 130, 150, 0.4);
+  border-radius: 8px;
+}
+
+/* Avoid layout shift while definitions load */
+.word-popover-skeleton {
+  min-height: 3rem;
+}
