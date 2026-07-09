@@ -1,0 +1,68 @@
+# gitleaks configuration for voxic.
+# Extends the built-in rules (hundreds of known secret types) and adds project-
+# specific guardrails: the MaiMemo/Eudic API tokens, personal machine paths,
+# NAS mount paths, and private LAN IPs that must never be committed.
+
+title = "voxic"
+
+[extend]
+# Include all built-in rules (GitHub tokens, AWS keys, generic high-entropy, ...).
+useDefault = true
+
+# --- Project-specific tokens ----------------------------------------------
+# NOTE: use [ \t]* (not \s*) so the value must be on the SAME line — this avoids
+# matching an empty "TOKEN=" followed by the next line's content.
+[[rules]]
+id = "eudic-api-token"
+description = "Eudic (frdic) API token"
+regex = '''(?i)(?:eudic[_-]?token|authorization)["']?[ \t]*[:=][ \t]*["']?[A-Za-z0-9._-]{20,}'''
+keywords = ["eudic", "frdic"]
+tags = ["token", "eudic"]
+
+[[rules]]
+id = "maimemo-api-token"
+description = "MaiMemo open API token"
+regex = '''(?i)maimemo[_-]?token["']?[ \t]*[:=][ \t]*["']?[A-Za-z0-9._-]{20,}'''
+keywords = ["maimemo"]
+tags = ["token", "maimemo"]
+
+# --- Personal-info guardrails ---------------------------------------------
+[[rules]]
+id = "macos-home-path"
+description = "Personal macOS home path (/Users/<name>)"
+regex = '''/Users/[a-zA-Z0-9._-]{2,}/'''
+tags = ["personal", "path"]
+
+[[rules]]
+id = "nas-mount-path"
+description = "NAS / mount path (/Volumes/<share>)"
+regex = '''/Volumes/[a-zA-Z0-9._-]+/'''
+tags = ["personal", "path"]
+
+[[rules]]
+id = "private-lan-ip"
+description = "Private LAN IP (RFC1918: 192.168.x.x / 10.x.x.x / 172.16-31.x.x)"
+regex = '''\b(?:192\.168|10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b'''
+tags = ["personal", "network"]
+
+# --- Allowlists ------------------------------------------------------------
+[[allowlists]]
+description = "localhost + placeholder values used in docs/examples"
+regexes = [
+  '''127\.0\.0\.1''',
+  '''0\.0\.0\.0''',
+  '''/path/to/''',
+  '''example\.com''',
+  '''<your-''',
+]
+
+[[allowlists]]
+description = "build artifacts, deps, and runtime data — never committed, but excluded from scans"
+paths = [
+  '''node_modules/''',
+  '''\.nuxt/''',
+  '''\.output/''',
+  '''dist/''',
+  '''/data/''',
+  '''pnpm-lock\.yaml$''',
+]

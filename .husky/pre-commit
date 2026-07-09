@@ -1,0 +1,15 @@
+# Block secrets/personal paths before they're committed. CI (gitleaks action)
+# re-scans every push as a backstop.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "⚠  gitleaks not installed — skipping local scan (CI still enforces). Install: brew install gitleaks"
+  exit 0
+fi
+
+gitleaks git --pre-commit --staged -c .gitleaks.toml --redact
+status=$?
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "❌ gitleaks found potential secrets or personal paths in your staged changes."
+  echo "   Review above. To bypass (NOT recommended), commit with --no-verify."
+  exit $status
+fi

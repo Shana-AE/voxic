@@ -91,6 +91,16 @@ pnpm typecheck    # tsc/vue-tsc across the workspace
 
 Eudic's open API only resolves words **already saved** in your wordbook (returns "单词不存在" otherwise) — so it can't be the sole dictionary source. The tiered lookup handles this: daily stories use the rich embedded word notes (zero API, always works); arbitrary text falls back to Free Dictionary API for common words. "Save to Eudic" adds words to your wordbook for future lookup + study.
 
+## Secret scanning (gitleaks)
+
+The repo is guarded against accidental credential/personal-info leaks:
+
+- **`.gitleaks.toml`** — extends the built-in rules and adds project-specific guardrails: the MaiMemo/Eudic API tokens, personal macOS paths (`/Users/...`), NAS mount paths (`/Volumes/...`), and private LAN IPs.
+- **Pre-commit hook** (husky) — runs `gitleaks` on staged changes; a commit with a leak is blocked locally. (`pnpm install` installs the hook via the `prepare` script. Bypass only with `--no-verify`.)
+- **GitHub Actions** (`.github/workflows/gitleaks.yml`) — re-scans every push/PR as a backstop.
+
+Install gitleaks locally with `brew install gitleaks`. Config is env-driven — real paths/tokens live in the gitignored `apps/web/.env`, never in the repo.
+
 ## Phase 2 (not yet built)
 
 SM-2 spaced-repetition drills targeting your FORGET/VAGUE words with multi-modal recall (cloze, typing, audio-recall) — complements MaiMemo rather than duplicating its basic flashcards. The SQLite `review_state` table + `packages/core/src/sr/` stub are laid in for a clean add-on.
