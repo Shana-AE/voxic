@@ -60,14 +60,14 @@ For LAN access from your phone/Pura X, run `pnpm dev --host` (or set `NUXT_HOST=
 
 ### Configuration
 
-Copy `apps/web/.env.example` to `apps/web/.env` and fill in your paths (all required):
+Copy `apps/web/.env.example` to `apps/web/.env` and fill in your paths (all required; Nuxt maps them via the `NUXT_` prefix):
 
 ```
-MAIMEMO_NAS_ROOT=/path/to/maimemo/data
-GPTSOVITS_BASE=http://127.0.0.1:9880
-VOICE_ROTATION_PATH=/path/to/voice_rotation.json
-VOICE_LIST_PATH=/path/to/voice_list_local.txt
-EUDIC_TOKEN=              # or set EUDIC_SECRETS_PATH to a file with an EUDIC_TOKEN= line
+NUXT_MAIMEMO_NAS_ROOT=/path/to/maimemo/data
+NUXT_GPTSOVITS_BASE=http://127.0.0.1:9880
+NUXT_VOICE_ROTATION_PATH=/path/to/voice_rotation.json
+NUXT_VOICE_LIST_PATH=/path/to/voice_list_local.txt
+NUXT_EUDIC_TOKEN=              # or set NUXT_EUDIC_SECRETS_PATH to a file with an EUDIC_TOKEN= line
 ```
 
 ## Usage
