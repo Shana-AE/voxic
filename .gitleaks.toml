@@ -66,3 +66,16 @@ paths = [
   '''/data/''',
   '''pnpm-lock\.yaml$''',
 ]
+
+[[allowlists]]
+description = ".env.example contains only placeholder values (never real secrets)"
+paths = [
+  '''\.env\.example$''',
+]
+
+[[allowlists]]
+description = "the gitleaks config + workflow contain rule patterns/descriptions, not real secrets"
+paths = [
+  '''\.gitleaks\.toml$''',
+  '''\.github/workflows/.*gitleaks.*''',
+]

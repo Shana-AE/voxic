@@ -40,6 +40,14 @@ export default defineNuxtConfig({
     eudicSecretsPath: "",
     dbPath: "./data/app.db",
     ttsCacheDir: "./data/tts",
+    // Postgres (primary source for MaiMemo word data). All env-driven — the real
+    // host/password live in the gitignored .env. Password falls back to ~/.pgpass.
+    pgHost: "",
+    pgPort: 5432,
+    pgDbname: "",
+    pgUser: "",
+    pgPassword: "",
+    pgPassFile: "~/.pgpass",
     // Exposed to client (non-secret):
     public: {
       appName: "Voxic",

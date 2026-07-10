@@ -68,7 +68,14 @@ NUXT_GPTSOVITS_BASE=http://127.0.0.1:9880
 NUXT_VOICE_ROTATION_PATH=/path/to/voice_rotation.json
 NUXT_VOICE_LIST_PATH=/path/to/voice_list_local.txt
 NUXT_EUDIC_TOKEN=              # or set NUXT_EUDIC_SECRETS_PATH to a file with an EUDIC_TOKEN= line
+NUXT_PG_HOST=                  # Postgres: primary source for MaiMemo word data (forget/vague/familiar + progress)
+NUXT_PG_PORT=5432
+NUXT_PG_DBNAME=
+NUXT_PG_USER=
+NUXT_PG_PASSWORD=              # or leave blank to read ~/.pgpass
 ```
+
+**Data sources:** articles are read from `NUXT_MAIMEMO_NAS_ROOT` (the cron writes `DD-article.md` there). Word-status data (the forget/vague/familiar buckets + study progress) is read from **Postgres** (`maimemo.daily_snapshots` + `maimemo.daily_items`, written by the 03:30 cron) — with the NAS JSON as a fallback for pre-migration dates or PG outages.
 
 ## Usage
 

@@ -5,6 +5,7 @@ import { parseArticle, parseImportedText } from "@voxic/core"
 import type { ParsedArticle } from "@voxic/core"
 import { useDb, schema } from "../db"
 import { eq, desc } from "drizzle-orm"
+import { getPgPool } from "./postgres"
 
 /** A lightweight article-listing entry (no body). */
 export interface ArticleListItem {
@@ -182,9 +183,72 @@ export function getArticleById(id: string): ParsedArticle {
   return getArticle(date)
 }
 
-/** Read the word-status JSON for a date (FORGET/VAGUE/FAMILIAR buckets). */
-export function getWordStatus(date: string) {
-  const root = nasRoot()
+/** Shape returned for a day's word-status data (used by the reader summary). */
+export interface WordStatusResult {
+  date: string
+  progress: { finished: number; total: number; studyMin: number }
+  buckets: { FORGET: string[]; VAGUE: string[]; FAMILIAR: string[] }
+}
+
+/**
+ * Read a day's word-status data. Postgres is primary (maimemo.daily_snapshots
+ * + daily_items, written by the 03:30 cron); the NAS JSON is a fallback for
+ * pre-migration dates (≤ 2026-07-08) or when PG is unavailable.
+ */
+export async function getWordStatus(date: string): Promise<WordStatusResult | null> {
+  const pg = getPgPool()
+  if (pg) {
+    try {
+      const pgResult = await getWordStatusFromPg(pg, date)
+      if (pgResult) return pgResult
+    } catch (e) {
+      console.warn(`[maimemo] PG word-status failed for ${date}, falling back to NAS:`, (e as Error).message)
+    }
+  }
+  return getWordStatusFromNas(date)
+}
+
+/** Postgres path: one snapshot row + the day's items grouped by first_response. */
+async function getWordStatusFromPg(pg: import("pg").Pool, date: string): Promise<WordStatusResult | null> {
+  const snap = await pg.query(
+    `SELECT finished_count, target_count, study_time_ms
+       FROM maimemo.daily_snapshots
+      WHERE study_date = $1
+      LIMIT 1`,
+    [date],
+  )
+  if (snap.rowCount === 0 || !snap.rows[0]) return null
+  const s = snap.rows[0] as { finished_count: number; target_count: number; study_time_ms: string | number }
+  const items = await pg.query(
+    `SELECT first_response, spelling
+       FROM maimemo.daily_items
+      WHERE study_date = $1 AND spelling IS NOT NULL AND spelling <> ''`,
+    [date],
+  )
+  const buckets = { FORGET: [] as string[], VAGUE: [] as string[], FAMILIAR: [] as string[] }
+  for (const row of items.rows as Array<{ first_response: string | null; spelling: string }>) {
+    const key = (row.first_response ?? "OTHER").toUpperCase() as keyof typeof buckets
+    if (key in buckets) buckets[key].push(row.spelling.trim())
+  }
+  return {
+    date,
+    progress: {
+      finished: s.finished_count,
+      total: s.target_count,
+      studyMin: Math.floor(Number(s.study_time_ms) / 60000),
+    },
+    buckets,
+  }
+}
+
+/** NAS-JSON fallback (pre-migration dates or PG outage). */
+function getWordStatusFromNas(date: string): WordStatusResult | null {
+  let root: string
+  try {
+    root = nasRoot()
+  } catch {
+    return null
+  }
   const y = date.slice(0, 4)
   const m = date.slice(5, 7)
   const d = date.slice(8, 10)
