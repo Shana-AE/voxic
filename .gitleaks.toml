@@ -79,3 +79,9 @@ paths = [
   '''\.gitleaks\.toml$''',
   '''\.github/workflows/.*gitleaks.*''',
 ]
+
+[[allowlists]]
+description = "deployment templates contain placeholder paths only"
+paths = [
+  '''deploy/.*\.template$''',
+]

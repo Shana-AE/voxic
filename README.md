@@ -98,6 +98,25 @@ pnpm typecheck    # tsc/vue-tsc across the workspace
 
 Eudic's open API only resolves words **already saved** in your wordbook (returns "单词不存在" otherwise) — so it can't be the sole dictionary source. The tiered lookup handles this: daily stories use the rich embedded word notes (zero API, always works); arbitrary text falls back to Free Dictionary API for common words. "Save to Eudic" adds words to your wordbook for future lookup + study.
 
+## Production deploy + auto-start (macOS)
+
+```bash
+pnpm --filter @voxic/web build          # → apps/web/.output/
+# apps/web/start.sh sources .env, binds 0.0.0.0:4321, runs node .output/server/index.mjs
+```
+
+Auto-start at login via a launchd **LaunchAgent** (template in `deploy/com.voxic.plist.template`):
+
+```bash
+cp deploy/com.voxic.plist.template ~/Library/LaunchAgents/com.<you>.voxic.plist
+# edit the paths/user inside, then:
+launchctl load ~/Library/LaunchAgents/com.<you>.voxic.plist
+```
+
+`RunAtLoad` starts it at login; `KeepAlive` restarts on crash. Logs → `~/Library/Logs/voxic/{out,err}.log`.
+
+**Reboot-safety:** a stale SMB mount after a reboot would freeze a sync `readdirSync`. A NAS health guard (`server/utils/nasHealth.ts`) probes the mount in a child process with a hard timeout, so stale-NAS requests return a fast 503 instead of hanging the server; once the mount is remounted, requests recover automatically. (If the NAS goes stale: `sudo umount -f /Volumes/<share>` and remount, or reboot.)
+
 ## Secret scanning (gitleaks)
 
 The repo is guarded against accidental credential/personal-info leaks:

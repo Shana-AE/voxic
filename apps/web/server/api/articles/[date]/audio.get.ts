@@ -1,9 +1,13 @@
 import { existsSync, createReadStream, statSync } from "node:fs"
 import { findArticleMedia } from "../../../utils/maimemo"
+import { probeNas } from "../../../utils/nasHealth"
 
 /** GET /api/articles/:date/audio — stream the cron-generated article MP3. */
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const date = getRouterParam(event, "date")!
+  if (!(await probeNas())) {
+    throw createError({ statusCode: 503, statusMessage: "NAS not reachable (stale mount?)." })
+  }
   const media = findArticleMedia(date)
   if (!media || !existsSync(media.path)) {
     throw createError({ statusCode: 404, statusMessage: `No audio for ${date}` })
