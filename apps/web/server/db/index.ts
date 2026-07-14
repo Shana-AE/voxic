@@ -67,6 +67,15 @@ function initSchema(raw: Database.Database) {
       last_reviewed_at INTEGER,
       updated_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS word_cards (
+      word TEXT PRIMARY KEY,
+      phonetic TEXT,
+      cn_def TEXT,
+      example_en TEXT,
+      example_zh TEXT,
+      generated_at INTEGER NOT NULL
+    );
   `)
 }
 

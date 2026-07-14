@@ -31,6 +31,21 @@ export const ttsCache = sqliteTable("tts_cache", {
 })
 
 /**
+ * AI-generated flashcard data per word (DeepSeek via Qiniu). Generated once,
+ * cached forever (a word's definition/example don't change). Powers the
+ * daily-words card page + 随身听 audio mode.
+ */
+export const wordCards = sqliteTable("word_cards", {
+  word: text("word").primaryKey(),
+  phonetic: text("phonetic"),
+  cnDef: text("cn_def"),
+  exampleEn: text("example_en"),
+  exampleZh: text("example_zh"),
+  generatedAt: integer("generated_at").notNull(),
+})
+
+
+/**
  * Per-word spaced-repetition state (phase 2 review drills). SM-2 fields.
  * Populated from MaiMemo FORGET/VAGUE buckets; updated as the user drills.
  */

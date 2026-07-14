@@ -49,6 +49,12 @@ export default defineNuxtConfig({
     pgUser: "",
     pgPassword: "",
     pgPassFile: "~/.pgpass",
+    // AI provider (OpenAI-compatible gateway) for flashcard generation + chat.
+    // Defaults point at the Qiniu gateway; key read from .secrets if empty.
+    aiBaseUrl: "https://api.qnaigc.com/v1",
+    aiApiKey: "",
+    aiModel: "deepseek/deepseek-v4-flash",
+    aiFallbackModel: "",
     // Exposed to client (non-secret):
     public: {
       appName: "Voxic",
