@@ -1,4 +1,4 @@
-import { getArticleById, getWordStatus } from "../../utils/maimemo"
+import { getArticleById, getWordStatus, articleInObsidian } from "../../utils/maimemo"
 import { probeNas } from "../../utils/nasHealth"
 
 /**
@@ -8,10 +8,12 @@ import { probeNas } from "../../utils/nasHealth"
 export default defineEventHandler(async (event) => {
   const id = decodeURIComponent(getRouterParam(event, "id")!)
   const isMaimemo = !id.startsWith("import:")
+  const date = id.startsWith("maimemo:") ? id.slice("maimemo:".length) : id
 
-  // MaiMemo articles live on the NAS — guard against a stale mount so a hung
-  // readdirSync can't freeze the event loop. Imports come from SQLite (no NAS).
-  if (isMaimemo && !(await probeNas())) {
+  // Articles in the Obsidian vault are local — serve without the NAS. Only gate
+  // on a NAS probe when the article isn't local (legacy dates live on the NAS),
+  // so a stale mount can't block reading recent articles.
+  if (isMaimemo && !articleInObsidian(date) && !(await probeNas())) {
     throw createError({
       statusCode: 503,
       statusMessage: "NAS not reachable (stale mount?). Remount the NAS and retry.",
@@ -21,8 +23,6 @@ export default defineEventHandler(async (event) => {
   const article = getArticleById(id)
 
   let words: Awaited<ReturnType<typeof getWordStatus>> | null = null
-  // Word-status buckets only exist for maimemo articles. Postgres primary,
-  // NAS-JSON fallback — never let a data-source hiccup break article loading.
   if (article.source.kind === "maimemo") {
     try {
       words = await getWordStatus(article.source.date)

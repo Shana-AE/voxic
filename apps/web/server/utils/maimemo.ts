@@ -30,21 +30,51 @@ function nasRoot(): string {
   return cfg.maimemoNasRoot
 }
 
-/** Find a daily-story article file on the NAS for a given date (YYYY-MM-DD). */
+/** Resolve the Obsidian vault base for MaiMemo articles (env-driven; null if unset). */
+function obsidianBase(): string | null {
+  const cfg = useRuntimeConfig()
+  const p = cfg.obsidianArticlesPath
+  return p ? p.replace(/^~(?=$|\/|\\)/, "") : null
+}
+
+/** Full path to a date's article inside the Obsidian vault. */
+function obsidianArticleFile(date: string): string | null {
+  const base = obsidianBase()
+  if (!base) return null
+  return join(base, date.slice(0, 4), date.slice(5, 7), `MaiMemo Daily Story - ${date}.md`)
+}
+
+/** True if the date's article exists locally in the Obsidian vault (no NAS needed). */
+export function articleInObsidian(date: string): boolean {
+  const f = obsidianArticleFile(date)
+  return !!f && existsSync(f)
+}
+
+/**
+ * Find a daily-story article file for a date (YYYY-MM-DD). Obsidian is checked
+ * first (local, reliable — the cron now persists there), then the NAS as a
+ * fallback for legacy dates. Returns null if neither has it.
+ */
 function findArticleFile(date: string): string | null {
-  const root = nasRoot()
+  const obs = obsidianArticleFile(date)
+  if (obs && existsSync(obs)) return obs
+
+  let root: string
+  try {
+    root = nasRoot()
+  } catch {
+    return null
+  }
   const y = date.slice(0, 4)
   const m = date.slice(5, 7)
   const d = date.slice(8, 10)
-  const candidates = [
-    join(root, y, m, `${d}-article.md`),
-    join(root, y, m, `${d}.md`),
-  ]
-  for (const c of candidates) if (existsSync(c)) return c
+  for (const c of [join(root, y, m, `${d}-article.md`), join(root, y, m, `${d}.md`)]) {
+    if (existsSync(c)) return c
+  }
   return null
 }
 
-/** Scan the NAS for all daily-story articles, newest first. */
+/** Scan the NAS for daily-story articles (legacy/parallel source). */
 export function listNasArticles(): ArticleListItem[] {
   const root = nasRoot()
   const items: ArticleListItem[] = []
@@ -56,14 +86,72 @@ export function listNasArticles(): ArticleListItem[] {
         const m = /^(\d{2})-article\.md$/.exec(f)
         if (!m) continue
         const date = `${year}-${month}-${m[1]}`
-        const path = join(dir, f)
-        const { title, forgetCount, vagueCount, familiarCount } = peekMeta(path)
+        const { title, forgetCount, vagueCount, familiarCount } = peekMeta(join(dir, f))
         items.push({ id: date, date, title, source: "maimemo", forgetCount, vagueCount, familiarCount })
       }
     }
   }
-  return items.sort((a, b) => b.date.localeCompare(a.date))
+  return items
 }
+
+/** Scan the Obsidian vault for daily-story articles (new primary source). */
+function listObsidianArticles(): ArticleListItem[] {
+  const base = obsidianBase()
+  if (!base || !existsSync(base)) return []
+  const items: ArticleListItem[] = []
+  for (const year of readdirSync(base).filter((d) => /^\d{4}$/.test(d))) {
+    const months = readdirSync(join(base, year)).filter((d) => /^\d{2}$/.test(d))
+    for (const month of months) {
+      const dir = join(base, year, month)
+      let entries: string[]
+      try {
+        entries = readdirSync(dir)
+      } catch {
+        continue
+      }
+      for (const f of entries) {
+        const m = /^MaiMemo Daily Story - (\d{4}-\d{2}-\d{2})\.md$/.exec(f)
+        if (!m) continue
+        const date = m[1]!
+        const { title, forgetCount, vagueCount, familiarCount } = peekMeta(join(dir, f))
+        items.push({ id: date, date, title, source: "maimemo", forgetCount, vagueCount, familiarCount })
+      }
+    }
+  }
+  return items
+}
+
+/**
+ * List MaiMemo articles from both sources, merged + deduped by date (newest
+ * first). Obsidian is always scanned (local); the NAS is only scanned when
+ * `scanNas` is true (caller gates this on a probeNas check to avoid hanging on
+ * a stale mount).
+ */
+export function listMaimemoArticles(scanNas: boolean): ArticleListItem[] {
+  const now = Date.now()
+  // Articles change once daily — cache the list briefly so navigating the UI
+  // doesn't re-run the (potentially slow) NAS readdirSync on every request.
+  if (_listCache && now - _listCache.at < LIST_CACHE_TTL) {
+    return _listCache.items
+  }
+  const byDate = new Map<string, ArticleListItem>()
+  for (const it of listObsidianArticles()) byDate.set(it.date, it)
+  if (scanNas) {
+    try {
+      for (const it of listNasArticles()) {
+        if (!byDate.has(it.date)) byDate.set(it.date, it)
+      }
+    } catch {
+      // NAS read failed — keep Obsidian results.
+    }
+  }
+  const items = [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date))
+  _listCache = { items, at: now }
+  return items
+}
+
+const LIST_CACHE_TTL = 5 * 60 * 1000
+let _listCache: { items: ArticleListItem[]; at: number } | null = null
 
 /** Read just enough frontmatter for a list entry (no full parse). */
 function peekMeta(path: string): Pick<ArticleListItem, "title" | "forgetCount" | "vagueCount" | "familiarCount"> {

@@ -1,23 +1,13 @@
-import { listNasArticles, listCachedImports } from "../../utils/maimemo"
+import { listMaimemoArticles, listCachedImports } from "../../utils/maimemo"
 import { probeNas } from "../../utils/nasHealth"
 
-/** GET /api/articles — list all articles (MaiMemo daily stories + cached imports). */
-export default defineEventHandler(async (event) => {
-  let maimemo: Awaited<ReturnType<typeof listNasArticles>> = []
+/** GET /api/articles — list all articles (Obsidian + NAS + cached imports). */
+export default defineEventHandler(async () => {
+  // Obsidian is local (always scanned); NAS is gated on a health probe so a
+  // stale mount can't hang the event loop.
+  const nasOk = await probeNas()
+  const maimemo = listMaimemoArticles(nasOk)
   const imports = listCachedImports()
-  let nasError: string | null = null
-
-  // Guard the synchronous NAS scan: a stale mount would otherwise hang the
-  // event loop. Fail fast with a friendly message; imports still return.
-  if (await probeNas()) {
-    try {
-      maimemo = listNasArticles()
-    } catch (e) {
-      nasError = (e as Error).message
-    }
-  } else {
-    nasError = "NAS not reachable (stale mount?). Remount the NAS and refresh."
-  }
-
+  const nasError = nasOk ? null : "NAS unreachable — showing Obsidian articles only."
   return { maimemo, imports, nasError }
 })

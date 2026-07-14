@@ -34,6 +34,7 @@ export default defineNuxtConfig({
     // (see .env.example). Only generic localhost/relative paths are kept.
     maimemoNasRoot: "",
     gptsovitsBase: "http://127.0.0.1:9880",
+    obsidianArticlesPath: "",
     voiceRotationPath: "",
     voiceListPath: "",
     eudicToken: "",
