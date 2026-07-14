@@ -95,7 +95,10 @@ const ungeneratedCount = computed(() => forgetVague.value.filter((c) => !c.gener
       No word data for {{ date }} (the MaiMemo day may not be closed yet — try after 04:00).
     </p>
 
-    <div v-else class="card-grid">
+    <template v-else>
+      <ListenMode :cards="data.cards" />
+
+      <div class="card-grid">
       <article
         v-for="c in data.cards"
         :key="c.word"
@@ -112,7 +115,8 @@ const ungeneratedCount = computed(() => forgetVague.value.filter((c) => !c.gener
         <div v-if="c.exampleZh" class="ex-zh">{{ c.exampleZh }}</div>
         <div v-if="!c.generated" class="ungenerated">— not generated —</div>
       </article>
-    </div>
+      </div>
+    </template>
   </div>
 </template>
 

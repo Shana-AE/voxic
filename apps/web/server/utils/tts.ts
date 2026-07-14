@@ -41,9 +41,10 @@ async function synthesizeWav(
   voiceName: string,
   base: string,
   params?: TtsParams,
+  textLang?: "en" | "zh",
 ): Promise<Buffer> {
   const voice = findVoice(voiceName)!
-  const url = buildTtsUrl(base, text, voice, params)
+  const url = buildTtsUrl(base, text, voice, params, textLang)
   const buf = await $fetch<ArrayBuffer>(url, {
     responseType: "arrayBuffer",
     timeout: 300_000,
@@ -112,6 +113,65 @@ export async function synthesizeWord(text: string, voiceName: string): Promise<s
   let wav: Buffer
   try {
     wav = await synthesizeWav(framed, voiceName, base, params)
+  } catch (e) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: `GPT-SoVITS synthesis failed: ${(e as Error).message}`,
+    })
+  }
+  const mp3 = await wavToMp3(wav)
+  writeFileSync(mp3Path, mp3)
+
+  const db = useDb()
+  db.insert(schema.ttsCache)
+    .values({
+      cacheKey: key,
+      voice: voiceName,
+      segIndex: 0,
+      text: framed,
+      audioPath: mp3Path,
+      createdAt: Date.now(),
+    })
+    .onConflictDoUpdate({ target: schema.ttsCache.cacheKey, set: { audioPath: mp3Path } })
+    .run()
+
+  return mp3Path
+}
+
+/**
+ * Synthesize arbitrary text in a given language — powers the 随身听 listen mode
+ * for both English (spelling/example_en) and Chinese (释义/example_zh) fields.
+ * Lone English words are framed for clean pronunciation; sentences and all
+ * Chinese text are sent as-is. Cached on disk by (lang, text, voice).
+ */
+export async function synthesizeText(
+  text: string,
+  voiceName: string,
+  lang: "en" | "zh" = "en",
+): Promise<string> {
+  const cfg = useRuntimeConfig()
+  const base = cfg.gptsovitsBase
+  const voice = findVoice(voiceName)
+  if (!voice) throw createError({ statusCode: 404, statusMessage: `Unknown voice: ${voiceName}` })
+  if (!voice.refOk) {
+    throw createError({ statusCode: 400, statusMessage: `Voice ${voiceName} has no reference audio` })
+  }
+
+  const trimmed = text.trim().replace(/[.!?]+$/, "")
+  const loneEnWord = lang === "en" && !/\s/.test(trimmed)
+  const framed = loneEnWord ? `${trimmed}. ${trimmed}.` : trimmed
+  const key = ttsCacheKey(`${lang}::${framed}`, voiceName)
+  const dir = cacheDir()
+  const mp3Path = join(dir, `${key}.mp3`)
+
+  if (existsSync(mp3Path)) return mp3Path
+
+  await ensureVoiceRegistered(voiceName, base)
+  const params: TtsParams = loneEnWord ? { temperature: 0.1, topK: 5, topP: 0.5 } : { temperature: 0.3 }
+
+  let wav: Buffer
+  try {
+    wav = await synthesizeWav(framed, voiceName, base, params, lang === "zh" ? "zh" : undefined)
   } catch (e) {
     throw createError({
       statusCode: 502,

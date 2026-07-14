@@ -51,15 +51,17 @@ export function buildTtsUrl(
   text: string,
   voice: Voice,
   params?: TtsParams,
+  textLang?: "en" | "ja" | "zh" | "ko",
 ): string {
   const lang = langFromVoiceName(voice.name)
+  const tLang = textLang ?? lang
   const u = new URL(base)
   u.pathname = "/"
   u.searchParams.set("refer_wav_path", voice.ref)
   u.searchParams.set("prompt_text", promptTextForLang(lang))
   u.searchParams.set("prompt_language", lang)
   u.searchParams.set("text", text)
-  u.searchParams.set("text_language", "en")
+  u.searchParams.set("text_language", tLang)
   u.searchParams.set("spk", voice.name)
   if (params?.topK != null) u.searchParams.set("top_k", String(params.topK))
   if (params?.topP != null) u.searchParams.set("top_p", String(params.topP))
