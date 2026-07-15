@@ -71,7 +71,7 @@ def main() -> None:
                     shutil.copy(v["ref"], sl)
             args = (
                 ["whisper", *[str(work / f"{slug(v['name'])}.wav") for v in batch]]
-                + ["--model", "tiny", "--language", lang, "--output_format", "json", "--output_dir", str(wout)]
+                + ["--model", os.environ.get("WHISPER_MODEL", "base"), "--language", lang, "--output_format", "json", "--output_dir", str(wout)]
             )
             t = time.time()
             subprocess.run(args, capture_output=True, text=True, timeout=180 + 30 * len(batch))
