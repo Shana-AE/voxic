@@ -1,4 +1,5 @@
 import { defineStore } from "pinia"
+import { useStorage } from "@vueuse/core"
 import type { VoiceCatalog } from "@voxic/core"
 
 export type RepeatMode = "off" | "on"
@@ -17,6 +18,13 @@ export const usePlayerStore = defineStore("player", () => {
   const repeatMode = ref<RepeatMode>("off")
   const playbackRate = ref(1)
 
+  // Persist the chosen voice across refreshes/sessions (store owns this so the
+  // default-voice logic in loadCatalog can't clobber a saved selection).
+  const savedVoice = useStorage("voxic:voice", "")
+  watch(voice, (v) => {
+    if (v) savedVoice.value = v
+  })
+
   const catalog = ref<VoiceCatalog | null>(null)
   const hasAudio = computed(() => !!audioUrl.value)
 
@@ -26,8 +34,9 @@ export const usePlayerStore = defineStore("player", () => {
     try {
       catalog.value = await $fetch<VoiceCatalog>("/api/voices")
       if (!voice.value) {
+        // Restore the persisted selection first; else default to first EN voice.
         const firstEn = catalog.value.voiceList.find((v) => v.lang === "en" && v.refOk)
-        voice.value = firstEn?.name ?? catalog.value.voiceList[0]?.name ?? ""
+        voice.value = savedVoice.value || (firstEn?.name ?? catalog.value.voiceList[0]?.name ?? "")
       }
     } catch (e) {
       error.value = (e as Error).message
