@@ -150,6 +150,8 @@ export interface Voice {
   refOk: boolean
   /** Group for the selector; "voice_list" pinned to top. */
   group: "voice_list" | "other" | "base"
+  /** Pinyin initial (A–Z) for CJK labels, for alphabet ordering. */
+  pinyinInitial?: string
 }
 
 /** Grouped voice catalog returned by /api/voices. */

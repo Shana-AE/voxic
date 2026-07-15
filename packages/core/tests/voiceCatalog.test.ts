@@ -37,6 +37,14 @@ describe("buildVoiceCatalog", () => {
     expect(v.label).toBe("Lancet-2")
     expect(v.lang).toBe("en")
   })
+
+  it("computes a pinyin initial for CJK labels (alphabet ordering)", () => {
+    const k = catalog.voiceList.find((x) => x.name === "凯尔希_en")!
+    expect(k.pinyinInitial).toBe("K") // 凯 → Kǎi → K
+    // ASCII labels have no pinyin initial.
+    const l = catalog.voiceList.find((x) => x.name === "Lancet-2_en")!
+    expect(l.pinyinInitial).toBeUndefined()
+  })
 })
 
 describe("parseVoiceListFile", () => {

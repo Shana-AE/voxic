@@ -5,12 +5,10 @@ import type { Voice } from "@voxic/core"
 
 const player = usePlayerStore()
 // Voice persistence is owned by the player store (so loadCatalog's default
-// can't clobber a saved selection). This component only persists the EN-only
-// list filter and the sort order.
+// can't clobber a saved selection). This component persists the EN-only filter.
 const open = ref(false)
 const search = ref("")
 const langOnly = useStorage("voxic:lang-only", true) // EN-only by default
-const sortMode = useStorage<"ascii" | "cjk">("voxic:voice-sort", "ascii")
 const root = ref<HTMLElement | null>(null)
 onClickOutside(root, () => (open.value = false))
 
@@ -32,10 +30,15 @@ const filtered = computed<Voice[]>(() => {
 const CJK = /[\u4e00-\u9fff]/
 const ASCII = /[A-Za-z]/
 
-/** Group key: ASCII → the letter; CJK → the first character (its own section); else "#". */
-function groupKey(label: string): string {
-  const first = label[0] ?? "#"
+/**
+ * Group key for the catalog. ASCII labels → their letter; CJK labels → the
+ * pinyin initial (A–Z, precomputed server-side) so Chinese-named voices are
+ * ordered by pinyin alphabet alongside the English ones; anything else → "#".
+ */
+function groupKey(v: Voice): string {
+  const first = v.label[0] ?? "#"
   if (ASCII.test(first)) return first.toUpperCase()
+  if (v.pinyinInitial) return v.pinyinInitial
   if (CJK.test(first)) return first
   return "#"
 }
@@ -44,35 +47,24 @@ interface Group { letter: string; voices: Voice[] }
 const grouped = computed<Group[]>(() => {
   const map = new Map<string, Voice[]>()
   for (const v of filtered.value) {
-    const key = groupKey(v.label)
+    const key = groupKey(v)
     const arr = map.get(key) ?? []
     arr.push(v)
     map.set(key, arr)
   }
-  const rank = (k: string): number => (ASCII.test(k) ? 0 : CJK.test(k) ? 1 : 2)
+  const rank = (k: string): number => (/[A-Z]/.test(k) ? 0 : CJK.test(k) ? 1 : 2)
   return [...map.entries()]
     .sort((a, b) => {
-      const ra = rank(a[0]), rb = rank(b[0])
-      if (ra !== rb) return ra - rb
-      // ASCII alphabetical; CJK by pinyin (zh-Hans-CN); "#" last.
-      const loc = ra === 1 ? "zh-Hans-CN" : undefined
-      return a[0].localeCompare(b[0], loc as "zh-Hans-CN" | undefined)
+      const r = rank(a[0]) - rank(b[0])
+      return r !== 0 ? r : a[0].localeCompare(b[0])
     })
-    .map(([letter, voices]) => {
-      const loc = CJK.test(letter) ? "zh-Hans-CN" : undefined
-      return { letter, voices: voices.sort((a, b) => a.label.localeCompare(b.label, loc as "zh-Hans-CN" | undefined)) }
-    })
-})
-
-// When sortMode is "cjk", surface CJK voices ahead of ASCII (and vice-versa).
-const orderedGroups = computed<Group[]>(() => {
-  if (sortMode.value === "ascii") return grouped.value
-  return [...grouped.value].sort((a, b) => {
-    const ac = CJK.test(a.letter), bc = CJK.test(b.letter)
-    if (ac && !bc) return -1
-    if (!ac && bc) return 1
-    return a.letter.localeCompare(b.letter, ac ? "zh-Hans-CN" : undefined)
-  })
+    .map(([letter, voices]) => ({
+      letter,
+      // CJK labels sort by pinyin (zh-Hans-CN); English labels normally.
+      voices: voices.sort((x, y) =>
+        x.label.localeCompare(y.label, CJK.test(x.label[0] ?? "") ? "zh-Hans-CN" : undefined),
+      ),
+    }))
 })
 
 function choose(v: Voice) {
@@ -105,22 +97,13 @@ function onKey(e: KeyboardEvent) {
           <button class="lang-toggle" :class="{ active: langOnly }" @click="langOnly = !langOnly">
             {{ langOnly ? "EN only" : "All langs" }}
           </button>
-          <button
-            v-if="!langOnly"
-            class="lang-toggle"
-            :class="{ active: sortMode === 'cjk' }"
-            title="Sort order"
-            @click="sortMode = sortMode === 'cjk' ? 'ascii' : 'cjk'"
-          >
-            {{ sortMode === "cjk" ? "拼音" : "A-Z" }}
-          </button>
         </div>
 
         <p v-if="!player.catalog" class="empty">Loading voices…</p>
-        <p v-else-if="!orderedGroups.length" class="empty">No voices match “{{ search }}”.</p>
+        <p v-else-if="!grouped.length" class="empty">No voices match “{{ search }}”.</p>
 
         <div v-else class="groups">
-          <div v-for="g in orderedGroups" :key="g.letter" class="group">
+          <div v-for="g in grouped" :key="g.letter" class="group">
             <div class="letter">{{ g.letter }}</div>
             <button
               v-for="v in g.voices"

@@ -1,4 +1,5 @@
 import type { Voice, VoiceCatalog } from "./types"
+import { pinyin } from "pinyin-pro"
 
 /** Raw shape of voice_rotation.json on the NAS. */
 interface RawVoiceRotation {
@@ -9,6 +10,15 @@ interface RawVoiceRotation {
     ref: string
     ref_ok?: boolean
   }>
+}
+
+/** A–Z pinyin initial for a label, for alphabet-ordering CJK-named voices. */
+function pinyinInitialOf(label: string): string | undefined {
+  const first = label[0]
+  if (!first || !/[\u4e00-\u9fff]/.test(first)) return undefined
+  const arr = pinyin(first, { pattern: "first", toneType: "none", type: "array" }) as string[]
+  const init = arr[0]?.toUpperCase()
+  return init && /[A-Z]/.test(init) ? init : undefined
 }
 
 /** Split "Lancet-2_en" → { label: "Lancet-2", lang: "en" }. */
@@ -49,6 +59,7 @@ export function buildVoiceCatalog(
       ref: v.ref,
       refOk: v.ref_ok !== false,
       group: inList ? "voice_list" : "other",
+      pinyinInitial: pinyinInitialOf(label),
     }
   })
 
