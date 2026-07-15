@@ -8,7 +8,7 @@ const player = usePlayerStore()
 // can't clobber a saved selection). This component persists the EN-only filter.
 const open = ref(false)
 const search = ref("")
-const langOnly = useStorage("voxic:lang-only", true) // EN-only by default
+const langOnly = useStorage("voxic:en-only", false) // show all languages by default
 const root = ref<HTMLElement | null>(null)
 onClickOutside(root, () => (open.value = false))
 
