@@ -56,6 +56,9 @@ export default defineNuxtConfig({
     aiApiKey: "",
     aiModel: "deepseek/deepseek-v4-flash",
     aiFallbackModel: "",
+    // Phoneme sync script (checks new words against GPT-SoVITS dicts).
+    syncScriptPath: "",
+    gptsovitsPython: "",
     // Exposed to client (non-secret):
     public: {
       appName: "Voxic",
