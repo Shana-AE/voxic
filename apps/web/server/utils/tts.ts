@@ -3,7 +3,7 @@ import { join, resolve } from "node:path"
 import { spawn } from "node:child_process"
 import { useRuntimeConfig } from "#imports"
 import { buildRegisterSpeakerUrl, buildTtsUrl, splitForTts, ttsCacheKey, type TtsParams } from "@voxic/core"
-import { findVoice } from "./voices"
+import { findVoice, getVoicePrompt } from "./voices"
 import { useDb, schema } from "../db"
 
 const registeredVoices = new Set<string>()
@@ -44,7 +44,9 @@ async function synthesizeWav(
   textLang?: "en" | "zh",
 ): Promise<Buffer> {
   const voice = findVoice(voiceName)!
-  const url = buildTtsUrl(base, text, voice, params, textLang)
+  // Use the real reference transcript as the prompt (from whisper) so GPT-SoVITS
+  // zero-shots cleanly even on short text; fall back to the generic prompt.
+  const url = buildTtsUrl(base, text, voice, params, textLang, getVoicePrompt(voiceName))
   const buf = await $fetch<ArrayBuffer>(url, {
     responseType: "arrayBuffer",
     timeout: 300_000,

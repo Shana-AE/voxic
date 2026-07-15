@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync, existsSync, statSync } from "node:fs"
 import { useRuntimeConfig } from "#imports"
 import { buildVoiceCatalog, parseVoiceListFile } from "@voxic/core"
 import type { VoiceCatalog } from "@voxic/core"
@@ -34,4 +34,28 @@ export function getVoiceCatalog(force = false): VoiceCatalog {
 export function findVoice(name: string) {
   const cat = getVoiceCatalog()
   return [...cat.voiceList, ...cat.other, ...cat.base].find((v) => v.name === name) ?? null
+}
+
+let _prompts: Record<string, string> | null = null
+let _promptsMtime = 0
+/**
+ * Map of voice name → reference-audio transcript (from whisper), so GPT-SoVITS
+ * gets a prompt_text matching each voice's ref.wav instead of a generic one
+ * (fixes short-text artifacts). Loaded lazily from NUXT_VOICE_PROMPTS_PATH;
+ * re-reads if the file's mtime changes.
+ */
+export function getVoicePrompt(name: string): string | undefined {
+  const cfg = useRuntimeConfig()
+  const path = cfg.voicePromptsPath
+  if (!path) return undefined
+  try {
+    const st = statSync(path)
+    if (!_prompts || st.mtimeMs !== _promptsMtime) {
+      _prompts = JSON.parse(readFileSync(path, "utf8"))
+      _promptsMtime = st.mtimeMs
+    }
+  } catch {
+    _prompts = null
+  }
+  return _prompts?.[name] || undefined
 }

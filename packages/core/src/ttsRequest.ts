@@ -52,13 +52,15 @@ export function buildTtsUrl(
   voice: Voice,
   params?: TtsParams,
   textLang?: "en" | "ja" | "zh" | "ko",
+  /** Real reference transcript for this voice (preferred over the generic per-language prompt). */
+  promptText?: string,
 ): string {
   const lang = langFromVoiceName(voice.name)
   const tLang = textLang ?? lang
   const u = new URL(base)
   u.pathname = "/"
   u.searchParams.set("refer_wav_path", voice.ref)
-  u.searchParams.set("prompt_text", promptTextForLang(lang))
+  u.searchParams.set("prompt_text", promptText || promptTextForLang(lang))
   u.searchParams.set("prompt_language", lang)
   u.searchParams.set("text", text)
   u.searchParams.set("text_language", tLang)

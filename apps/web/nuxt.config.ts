@@ -37,6 +37,7 @@ export default defineNuxtConfig({
     obsidianArticlesPath: "",
     voiceRotationPath: "",
     voiceListPath: "",
+    voicePromptsPath: "",
     eudicToken: "",
     eudicSecretsPath: "",
     dbPath: "./data/app.db",

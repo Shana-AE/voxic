@@ -96,7 +96,7 @@ const ungeneratedCount = computed(() => forgetVague.value.filter((c) => !c.gener
     </p>
 
     <template v-else>
-      <ListenMode :cards="data.cards" />
+      <ListenMode :cards="data.cards" :date="date" />
 
       <div class="card-grid">
       <article

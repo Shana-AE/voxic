@@ -10,7 +10,7 @@ interface WordCard {
   generated: boolean
 }
 
-const props = defineProps<{ cards: WordCard[] }>()
+const props = defineProps<{ cards: WordCard[]; date: string }>()
 
 const player = usePlayerStore()
 const audio = ref<HTMLAudioElement | null>(null)
@@ -20,16 +20,45 @@ const fields = reactive({ spelling: true, cnDef: true, exampleEn: true, exampleZ
 const currentIndex = ref(-1)
 const isPlaying = ref(false)
 
-// English fields use the selected voice; Chinese fields auto-pick a _zh voice.
-const zhVoice = computed(() => {
+// English fields use an EN voice (the selected one if it's EN, else the first
+// EN voice); Chinese fields auto-pick a _zh voice. This keeps each language
+// spoken by a matching model regardless of the global selection.
+function firstLang(lang: string): string {
   const cat = player.catalog
   if (!cat) return ""
   return (
-    [...cat.voiceList, ...cat.other].find((v) => v.lang === "zh" && v.refOk)?.name ??
-    [...cat.voiceList, ...cat.other].find((v) => v.lang === "ja" && v.refOk)?.name ??
-    player.voice
+    [...cat.voiceList, ...cat.other].find((v) => v.lang === lang && v.refOk)?.name ?? ""
   )
+}
+const enVoice = computed(() => {
+  const sel = player.catalog
+    ? [...player.catalog.voiceList, ...player.catalog.other].find((v) => v.name === player.voice)
+    : undefined
+  return sel?.lang === "en" && sel.refOk ? player.voice : firstLang("en")
 })
+const zhVoice = computed(() => firstLang("zh") || firstLang("ja") || enVoice.value)
+
+const preparing = ref(false)
+const prepResult = ref<string | null>(null)
+async function prepare() {
+  preparing.value = true
+  prepResult.value = null
+  try {
+    const res = await $fetch<{ prepared: number; total: number }>(
+      `/api/words/${props.date}/prepare-audio`,
+      {
+        method: "POST",
+        body: { enVoice: enVoice.value, zhVoice: zhVoice.value, fields: { ...fields } },
+        timeout: 600_000,
+      },
+    )
+    prepResult.value = `Prepared ${res.prepared}/${res.total} segments.`
+  } catch (e) {
+    prepResult.value = `Prepare failed: ${(e as Error).message}`
+  } finally {
+    preparing.value = false
+  }
+}
 
 interface Item { word: string; label: string; text: string; lang: "en" | "zh"; voice: string }
 
@@ -39,9 +68,9 @@ const playlist = computed<Item[]>(() => {
   const out: Item[] = []
   for (const c of scope) {
     for (let r = 0; r < repeat.value; r++) {
-      if (fields.spelling) out.push({ word: c.word, label: "spelling", text: c.word, lang: "en", voice: player.voice })
+      if (fields.spelling) out.push({ word: c.word, label: "spelling", text: c.word, lang: "en", voice: enVoice.value })
       if (fields.cnDef && c.cnDef) out.push({ word: c.word, label: "释义", text: c.cnDef, lang: "zh", voice: zhVoice.value })
-      if (fields.exampleEn && c.exampleEn) out.push({ word: c.word, label: "example", text: c.exampleEn, lang: "en", voice: player.voice })
+      if (fields.exampleEn && c.exampleEn) out.push({ word: c.word, label: "example", text: c.exampleEn, lang: "en", voice: enVoice.value })
       if (fields.exampleZh && c.exampleZh) out.push({ word: c.word, label: "译文", text: c.exampleZh, lang: "zh", voice: zhVoice.value })
     }
   }
@@ -139,8 +168,12 @@ watch([repeat, fields], () => {
       <button class="play-btn" :disabled="!ready" @click="toggle">{{ isPlaying ? "⏸" : "▶" }}</button>
       <button class="btn-ghost" :disabled="!ready" @click="next">⏭</button>
       <button class="btn-ghost" :disabled="!ready" @click="stop">⏹</button>
+      <button class="prep-btn" :disabled="!ready || preparing" @click="prepare">
+        {{ preparing ? "Preparing…" : "⚙ Prepare" }}
+      </button>
       <span v-if="currentIndex >= 0" class="pos">{{ currentIndex + 1 }}/{{ playlist.length }}</span>
     </div>
+    <p v-if="prepResult" class="prep-result">{{ prepResult }}</p>
 
     <audio ref="audio" preload="auto" @ended="onEnded" />
   </section>
@@ -174,5 +207,17 @@ watch([repeat, fields], () => {
 .btn-ghost { background: transparent; border: 0; color: inherit; font-size: 1rem; cursor: pointer; padding: 0.3rem 0.5rem; }
 .btn-ghost:disabled { opacity: 0.3; }
 .pos { margin-left: auto; font-size: 0.75rem; color: #636e80; font-variant-numeric: tabular-nums; }
+.prep-btn {
+  border: 1px solid rgba(120, 130, 150, 0.4);
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.prep-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.prep-btn:hover:not(:disabled) { background: rgba(120, 130, 150, 0.12); }
+.prep-result { margin: 0.3rem 0 0; font-size: 0.78rem; color: #636e80; }
 @media (max-width: 640px) { .settings { gap: 0.35rem; } }
 </style>
