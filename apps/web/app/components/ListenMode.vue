@@ -16,9 +16,14 @@ const player = usePlayerStore()
 const audio = ref<HTMLAudioElement | null>(null)
 
 const repeat = ref(1)
-const fields = reactive({ spelling: true, cnDef: true, exampleEn: true, exampleZh: true })
+const fields = reactive({ pronounce: true, spell: true, cnDef: true, exampleEn: true, exampleZh: true })
 const currentIndex = ref(-1)
 const isPlaying = ref(false)
+
+/** Spell a word letter-by-letter for GPT-SoVITS: "subservient" → "S. U. B. S. E. R. V. I. E. N. T." */
+function spellLetters(word: string): string {
+  return word.toUpperCase().split("").join(". ") + "."
+}
 
 // English fields use an EN voice (the selected one if it's EN, else the first
 // EN voice); Chinese fields auto-pick a _zh voice. This keeps each language
@@ -68,7 +73,8 @@ const playlist = computed<Item[]>(() => {
   const out: Item[] = []
   for (const c of scope) {
     for (let r = 0; r < repeat.value; r++) {
-      if (fields.spelling) out.push({ word: c.word, label: "spelling", text: c.word, lang: "en", voice: enVoice.value })
+      if (fields.pronounce) out.push({ word: c.word, label: "pronounce", text: c.word, lang: "en", voice: enVoice.value })
+      if (fields.spell) out.push({ word: c.word, label: "spell", text: spellLetters(c.word), lang: "en", voice: enVoice.value })
       if (fields.cnDef && c.cnDef) out.push({ word: c.word, label: "释义", text: c.cnDef, lang: "zh", voice: zhVoice.value })
       if (fields.exampleEn && c.exampleEn) out.push({ word: c.word, label: "example", text: c.exampleEn, lang: "en", voice: enVoice.value })
       if (fields.exampleZh && c.exampleZh) out.push({ word: c.word, label: "译文", text: c.exampleZh, lang: "zh", voice: zhVoice.value })
@@ -157,7 +163,8 @@ watch([repeat, fields], () => {
           <option :value="5">5×</option>
         </select>
       </label>
-      <label class="tgl" :class="{ on: fields.spelling }"><input v-model="fields.spelling" type="checkbox">spelling</label>
+      <label class="tgl" :class="{ on: fields.pronounce }"><input v-model="fields.pronounce" type="checkbox">🔊 pronounce</label>
+      <label class="tgl" :class="{ on: fields.spell }"><input v-model="fields.spell" type="checkbox">🔤 spell</label>
       <label class="tgl" :class="{ on: fields.cnDef }"><input v-model="fields.cnDef" type="checkbox">释义</label>
       <label class="tgl" :class="{ on: fields.exampleEn }"><input v-model="fields.exampleEn" type="checkbox">example</label>
       <label class="tgl" :class="{ on: fields.exampleZh }"><input v-model="fields.exampleZh" type="checkbox">译文</label>

@@ -4,7 +4,7 @@ import { synthesizeText } from "../../../utils/tts"
 interface PrepBody {
   enVoice?: string
   zhVoice?: string
-  fields?: { spelling?: boolean; cnDef?: boolean; exampleEn?: boolean; exampleZh?: boolean }
+  fields?: { pronounce?: boolean; spell?: boolean; cnDef?: boolean; exampleEn?: boolean; exampleZh?: boolean }
   concurrency?: number
 }
 
@@ -21,15 +21,18 @@ export default defineEventHandler(async (event) => {
   )) as PrepBody
   const enVoice = body.enVoice
   const zhVoice = body.zhVoice
-  const f = body.fields ?? { spelling: true, cnDef: true, exampleEn: true, exampleZh: true }
+  const f = body.fields ?? { pronounce: true, spell: true, cnDef: true, exampleEn: true, exampleZh: true }
   const concurrency = Math.min(body.concurrency ?? 2, 2) // GPT-SoVITS serializes anyway
 
   const { cards } = await getCards(date)
   const scope = cards.filter((c) => c.generated && (c.status === "FORGET" || c.status === "VAGUE"))
 
+  const spellLetters = (w: string) => w.toUpperCase().split("").join(". ") + "."
+
   const segs: Array<{ text: string; voice: string; lang: "en" | "zh" }> = []
   for (const c of scope) {
-    if (f.spelling && enVoice) segs.push({ text: c.word, voice: enVoice, lang: "en" })
+    if (f.pronounce && enVoice) segs.push({ text: c.word, voice: enVoice, lang: "en" })
+    if (f.spell && enVoice) segs.push({ text: spellLetters(c.word), voice: enVoice, lang: "en" })
     if (f.cnDef && c.cnDef && zhVoice) segs.push({ text: c.cnDef, voice: zhVoice, lang: "zh" })
     if (f.exampleEn && c.exampleEn && enVoice) segs.push({ text: c.exampleEn, voice: enVoice, lang: "en" })
     if (f.exampleZh && c.exampleZh && zhVoice) segs.push({ text: c.exampleZh, voice: zhVoice, lang: "zh" })
