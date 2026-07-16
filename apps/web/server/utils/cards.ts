@@ -18,16 +18,25 @@ export interface WordCard {
   generated: boolean
 }
 
-/** Read a date's words + statuses from Postgres (primary word source). */
+/** Read a date's words + statuses from Postgres (primary word source). Retries once on connection drop. */
 export async function getDateWords(date: string): Promise<{ word: string; status: WordStatus }[]> {
   const pg = getPgPool()
   if (!pg) return []
-  const res = await pg.query<{ spelling: string; first_response: string | null }>(
-    `SELECT spelling, first_response
+  const query = () =>
+    pg!.query<{ spelling: string; first_response: string | null }>(
+      `SELECT spelling, first_response
        FROM maimemo.daily_items
       WHERE study_date = $1 AND spelling IS NOT NULL AND spelling <> ''`,
-    [date],
-  )
+      [date],
+    )
+  let res
+  try {
+    res = await query()
+  } catch (e) {
+    // NAS/WiFi connection drops — retry once.
+    console.warn(`[cards] PG query failed, retrying: ${(e as Error).message}`)
+    res = await query()
+  }
   return res.rows
     .map((r) => ({ word: r.spelling.trim(), status: (r.first_response ?? "FAMILIAR") as WordStatus }))
     .filter((r) => r.word.length > 0)

@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
   const path = await synthesizeWord(word, voice)
   setResponseHeader(event, "Content-Type", "audio/mpeg")
-  setResponseHeader(event, "Cache-Control", "public, max-age=86400, immutable")
+  setResponseHeader(event, "Cache-Control", "public, max-age=300, must-revalidate")
   return sendStream(event, createReadStream(path))
 })
 

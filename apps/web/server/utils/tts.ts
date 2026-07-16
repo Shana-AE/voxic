@@ -99,8 +99,9 @@ export async function synthesizeWord(text: string, voiceName: string): Promise<s
 
   // Frame single words; leave phrases untouched.
   const trimmed = text.trim().replace(/[.!?]+$/, "")
-  const framed = /\s/.test(trimmed) ? trimmed : `${trimmed}. ${trimmed}.`
-  const key = ttsCacheKey(framed, voiceName)
+  const loneWord = !/\s/.test(trimmed)
+  const framed = loneWord ? `${trimmed}. ${trimmed}.` : trimmed
+  const key = ttsCacheKey(`en::${framed}`, voiceName)
   const dir = cacheDir()
   const mp3Path = join(dir, `${key}.mp3`)
 
@@ -109,8 +110,10 @@ export async function synthesizeWord(text: string, voiceName: string): Promise<s
 
   await ensureVoiceRegistered(voiceName, base)
 
-  // Low-randomness params for cleaner isolated-word pronunciation.
-  const params: TtsParams = { temperature: 0.1, topK: 5, topP: 0.5 }
+  // Use GPT-SoVITS default params (same as article TTS which works well).
+  // Previously used ultra-low temperature (0.1) which caused some words to
+  // get stuck producing "aaaa" filler.
+  const params: TtsParams | undefined = undefined
 
   let wav: Buffer
   try {
@@ -169,7 +172,9 @@ export async function synthesizeText(
   if (existsSync(mp3Path)) return mp3Path
 
   await ensureVoiceRegistered(voiceName, base)
-  const params: TtsParams = loneEnWord ? { temperature: 0.1, topK: 5, topP: 0.5 } : { temperature: 0.3 }
+  // Use GPT-SoVITS defaults (same as article TTS). Ultra-low temperature caused
+  // some words (e.g. subservient) to produce "aaaa" filler.
+  const params: TtsParams | undefined = undefined
 
   let wav: Buffer
   try {

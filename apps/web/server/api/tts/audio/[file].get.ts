@@ -16,6 +16,6 @@ export default defineEventHandler((event) => {
     throw createError({ statusCode: 404, statusMessage: "audio not found (may have been evicted)" })
   }
   setResponseHeader(event, "Content-Type", "audio/mpeg")
-  setResponseHeader(event, "Cache-Control", "public, max-age=86400, immutable")
+  setResponseHeader(event, "Cache-Control", "public, max-age=300, must-revalidate")
   return sendStream(event, createReadStream(path))
 })
