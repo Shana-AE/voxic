@@ -59,6 +59,10 @@ export default defineNuxtConfig({
     // Phoneme sync script (checks new words against GPT-SoVITS dicts).
     syncScriptPath: "",
     gptsovitsPython: "",
+    // Neutral English reference audio for word pronunciation (brighter tone than
+    // character refs which can sound gloomy). Empty = use the voice's own ref.
+    toneRefPath: "",
+    toneRefPrompt: "",
     // Exposed to client (non-secret):
     public: {
       appName: "Voxic",

@@ -54,13 +54,17 @@ export function buildTtsUrl(
   textLang?: "en" | "ja" | "zh" | "ko",
   /** Real reference transcript for this voice (preferred over the generic per-language prompt). */
   promptText?: string,
+  /** Override the reference audio path (e.g. a neutral tone ref for word pronunciation). */
+  refOverride?: string,
+  /** Override the prompt text for the reference (must match refOverride if set). */
+  refPromptOverride?: string,
 ): string {
   const lang = langFromVoiceName(voice.name)
   const tLang = textLang ?? lang
   const u = new URL(base)
   u.pathname = "/"
-  u.searchParams.set("refer_wav_path", voice.ref)
-  u.searchParams.set("prompt_text", promptText || promptTextForLang(lang))
+  u.searchParams.set("refer_wav_path", refOverride || voice.ref)
+  u.searchParams.set("prompt_text", refPromptOverride || promptText || promptTextForLang(lang))
   u.searchParams.set("prompt_language", lang)
   u.searchParams.set("text", text)
   u.searchParams.set("text_language", tLang)

@@ -20,9 +20,16 @@ const fields = reactive({ pronounce: true, spell: true, cnDef: true, exampleEn: 
 const currentIndex = ref(-1)
 const isPlaying = ref(false)
 
-/** Spell a word letter-by-letter for GPT-SoVITS: "subservient" → "S. U. B. S. E. R. V. I. E. N. T." */
+/** Spell a word using letter NAMES (not single letters) for GPT-SoVITS clarity:
+ * "subservient" → "ess. you. bee. ess. ee. ar. vee. ee. en. tee." */
+const LETTER_NAMES: Record<string, string> = {
+  a: "ay", b: "bee", c: "cee", d: "dee", e: "ee", f: "eff", g: "gee",
+  h: "aitch", i: "eye", j: "jay", k: "kay", l: "el", m: "em", n: "en",
+  o: "oh", p: "pee", q: "cue", r: "ar", s: "ess", t: "tee", u: "you",
+  v: "vee", w: "double-u", x: "ex", y: "why", z: "zee",
+}
 function spellLetters(word: string): string {
-  return word.toUpperCase().split("").join(". ") + "."
+  return word.toLowerCase().split("").map((c) => LETTER_NAMES[c] ?? c).join(". ") + "."
 }
 
 // English fields use an EN voice (the selected one if it's EN, else the first

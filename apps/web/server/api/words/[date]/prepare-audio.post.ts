@@ -27,7 +27,14 @@ export default defineEventHandler(async (event) => {
   const { cards } = await getCards(date)
   const scope = cards.filter((c) => c.generated && (c.status === "FORGET" || c.status === "VAGUE"))
 
-  const spellLetters = (w: string) => w.toUpperCase().split("").join(". ") + "."
+  const LETTER_NAMES: Record<string, string> = {
+    a: "ay", b: "bee", c: "cee", d: "dee", e: "ee", f: "eff", g: "gee",
+    h: "aitch", i: "eye", j: "jay", k: "kay", l: "el", m: "em", n: "en",
+    o: "oh", p: "pee", q: "cue", r: "ar", s: "ess", t: "tee", u: "you",
+    v: "vee", w: "double-u", x: "ex", y: "why", z: "zee",
+  }
+  const spellLetters = (w: string) =>
+    w.toLowerCase().split("").map((c) => LETTER_NAMES[c] ?? c).join(". ") + "."
 
   const segs: Array<{ text: string; voice: string; lang: "en" | "zh" }> = []
   for (const c of scope) {

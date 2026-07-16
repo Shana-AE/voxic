@@ -44,9 +44,16 @@ async function synthesizeWav(
   textLang?: "en" | "zh",
 ): Promise<Buffer> {
   const voice = findVoice(voiceName)!
-  // Use the real reference transcript as the prompt (from whisper) so GPT-SoVITS
-  // zero-shots cleanly even on short text; fall back to the generic prompt.
-  const url = buildTtsUrl(base, text, voice, params, textLang, getVoicePrompt(voiceName))
+  const cfg = useRuntimeConfig()
+  // For English, optionally use a neutral tone-ref (brighter than character refs).
+  // The character's registered weights still provide the timbre.
+  const useToneRef = textLang !== "zh" && cfg.toneRefPath
+  const url = buildTtsUrl(
+    base, text, voice, params, textLang,
+    getVoicePrompt(voiceName),
+    useToneRef ? cfg.toneRefPath : undefined,
+    useToneRef ? cfg.toneRefPrompt || undefined : undefined,
+  )
   const buf = await $fetch<ArrayBuffer>(url, {
     responseType: "arrayBuffer",
     timeout: 300_000,
@@ -61,7 +68,7 @@ function wavToMp3(wav: Buffer): Promise<Buffer> {
       "-f", "wav",
       "-i", "pipe:0",
       "-codec:a", "libmp3lame",
-      "-b:a", "96k",
+      "-b:a", "192k",
       "-f", "mp3",
       "pipe:1",
     ])
@@ -113,7 +120,7 @@ export async function synthesizeWord(text: string, voiceName: string): Promise<s
   // Use GPT-SoVITS default params (same as article TTS which works well).
   // Previously used ultra-low temperature (0.1) which caused some words to
   // get stuck producing "aaaa" filler.
-  const params: TtsParams | undefined = undefined
+  const params: TtsParams = { speed: 1.1 }
 
   let wav: Buffer
   try {
@@ -174,7 +181,7 @@ export async function synthesizeText(
   await ensureVoiceRegistered(voiceName, base)
   // Use GPT-SoVITS defaults (same as article TTS). Ultra-low temperature caused
   // some words (e.g. subservient) to produce "aaaa" filler.
-  const params: TtsParams | undefined = undefined
+  const params: TtsParams = { speed: 1.1 }
 
   let wav: Buffer
   try {
